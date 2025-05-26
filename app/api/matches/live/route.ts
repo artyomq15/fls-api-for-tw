@@ -11,15 +11,13 @@ export async function GET(request: NextRequest) {
   try {
     const payload = await getLiveMatch(id);
 
-    let matchId = null;
-
     if (payload.ONGOING && payload.ONGOING.length > 0) {
-      matchId = payload.ONGOING[0].id;
+      const match = await getMatch(payload.ONGOING[0].id);
+
+      return NextResponse.json(match, { status: 200 });
     }
 
-    const match = await getMatch(matchId);
-
-    return NextResponse.json(match, { status: 200 });
+    return NextResponse.json(null, { status: 200 });
   } catch (err) {
     return NextResponse.json(err, { status: 400 });
   }

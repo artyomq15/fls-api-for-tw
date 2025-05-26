@@ -14,7 +14,16 @@ export async function POST(request: NextRequest) {
     const summaries = await getPlayersSummary(ids);
     const matches = await Promise.all(ids.map((id) => getLastMatches(id)));
 
-    return NextResponse.json({ summaries, matches });
+    const matchesRecord = Object.values(matches).reduce<Record<string, any>>(
+      (acc, el) => {
+        acc[el.id] = el.matches;
+
+        return acc;
+      },
+      {}
+    );
+
+    return NextResponse.json({ summaries, matches: matchesRecord });
   } catch (err: any) {
     return NextResponse.json(err, { status: 400 });
   }

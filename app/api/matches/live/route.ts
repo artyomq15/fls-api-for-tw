@@ -17,7 +17,9 @@ export async function GET(request: NextRequest) {
       matchId = payload.ONGOING[0].id;
     }
 
-    return NextResponse.json({ id: matchId }, { status: 200 });
+    const match = await getMatch(matchId);
+
+    return NextResponse.json(match, { status: 200 });
   } catch (err) {
     return NextResponse.json(err, { status: 400 });
   }
@@ -38,5 +40,22 @@ async function getLiveMatch(id: string) {
 
   throw {
     errors: [{ code: "err_queue_0", message: "failed to get live match" }],
+  };
+}
+
+async function getMatch(id: string) {
+  const response = await fetch(
+    `https://www.faceit.com/api/match/v2/match/${id}`
+  );
+  const body = await response.json();
+
+  const payload = body.payload;
+
+  if (payload) {
+    return payload;
+  }
+
+  throw {
+    errors: [{ code: "err_match_not_found", message: "failed to find match" }],
   };
 }

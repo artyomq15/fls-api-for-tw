@@ -5,13 +5,24 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const ids: string[] = await request.json();
+    const {
+      ids,
+      matchId,
+    }: {
+      ids: string[];
+      matchId: string;
+    } = await request.json();
 
     if (!ids || ids.length === 0) {
       return NextResponse.json({ message: "No ids" }, { status: 400 });
     }
 
+    if (!matchId) {
+      return NextResponse.json({ message: "No match id" }, { status: 400 });
+    }
+
     const summaries = await getPlayersSummary(ids);
+    const lifetime = await getLifetimeStats(ids, matchId);
     const matches = await Promise.all(ids.map((id) => getLastMatches(id)));
 
     const matchesRecord = Object.values(matches).reduce<Record<string, any>>(
@@ -23,7 +34,7 @@ export async function POST(request: NextRequest) {
       {}
     );
 
-    return NextResponse.json({ summaries, matches: matchesRecord });
+    return NextResponse.json({ summaries, matches: matchesRecord, lifetime });
   } catch (err: any) {
     return NextResponse.json(err, { status: 400 });
   }
@@ -74,5 +85,34 @@ async function getLastMatches(id: string) {
       id: id,
       matches: [],
     };
+  }
+}
+
+async function getLifetimeStats(ids: string[], matchId: string) {
+  try {
+    const urlObj = new URL(
+      "https://www.faceit.com/api/stats/v1/stats/users/lifetime"
+    );
+    urlObj.searchParams.append("game", "cs2");
+    urlObj.searchParams.append("match_id", matchId);
+    ids.forEach((value) => urlObj.searchParams.append("player_ids", value));
+
+    const response = await fetch(urlObj.toString());
+
+    const body: Array<{
+      _id: {
+        playerId: string;
+      };
+    }> = await response.json();
+
+    const statsRecord = body.reduce<Record<string, any>>((acc, el) => {
+      acc[el["_id"].playerId] = el;
+
+      return acc;
+    }, {});
+
+    return statsRecord;
+  } catch (err: any) {
+    return {};
   }
 }
